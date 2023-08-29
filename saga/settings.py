@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     'system',
+    'pm'
 ]
 
 MIDDLEWARE = [
