@@ -30,7 +30,7 @@ class SprintRetrieveSerializer(BaseModelSerializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_owner_name(self, obj: Sprint):
-        return User.objects.filter(username=obj.owner).first().name
+        return User.objects.filter(username=obj.owner).first().nick_name
 
     @extend_schema_field(OpenApiTypes.INT)
     def get_feature_count(self, obj: Sprint):

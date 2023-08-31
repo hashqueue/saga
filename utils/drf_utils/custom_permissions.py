@@ -13,8 +13,8 @@ class RbacPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
         """演示环境禁止删除数据"""
-        if request.method == 'DELETE':
-            return False
+        # if request.method == 'DELETE':
+        #     return False
         return True
         # 如果用户是超级用户, 则放开权限
         # 只用作系统初始化时通过python3 manage.py createsuperuser注册的superuser用户添加初始数据时使用

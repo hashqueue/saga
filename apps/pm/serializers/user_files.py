@@ -31,7 +31,7 @@ class UserFileRetrieveSerializer(BaseModelSerializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_creator_name(self, obj: UserFile):
-        return User.objects.filter(username=obj.created_by).first().name
+        return User.objects.filter(username=obj.created_by).first().nick_name
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_file_name(self, obj: UserFile):

@@ -23,4 +23,4 @@ class CommentRetrieveSerializer(BaseModelSerializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_creator_name(self, obj: Comment):
-        return User.objects.filter(username=obj.created_by).first().name
+        return User.objects.filter(username=obj.created_by).first().nick_name

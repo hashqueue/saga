@@ -26,7 +26,7 @@ class ProjectRetrieveSerializer(BaseModelSerializer):
 
     @extend_schema_field(OpenApiTypes.STR)
     def get_owner_name(self, obj: Project):
-        return User.objects.filter(username=obj.owner).first().name
+        return User.objects.filter(username=obj.owner).first().nick_name
 
     @extend_schema_field(OpenApiTypes.INT)
     def get_sprint_count(self, obj: Project):
