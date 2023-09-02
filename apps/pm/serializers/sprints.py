@@ -19,8 +19,7 @@ class SprintRetrieveSerializer(BaseModelSerializer):
     finished_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S', read_only=True, help_text='完成时间')
     owner_name = serializers.SerializerMethodField(help_text='负责人姓名')
     project_name = serializers.CharField(source='project.name', help_text='所属项目的名称')
-    project_id = serializers.IntegerField(source='project.id', help_text='所属项目的ID')
-    feature_count = serializers.SerializerMethodField(help_text='需求数量')
+    requirement_count = serializers.SerializerMethodField(help_text='需求数量')
     task_count = serializers.SerializerMethodField(help_text='任务数量')
     bug_count = serializers.SerializerMethodField(help_text='缺陷数量')
 
@@ -33,7 +32,7 @@ class SprintRetrieveSerializer(BaseModelSerializer):
         return User.objects.filter(username=obj.owner).first().nick_name
 
     @extend_schema_field(OpenApiTypes.INT)
-    def get_feature_count(self, obj: Sprint):
+    def get_requirement_count(self, obj: Sprint):
         return obj.workitem_set.filter(work_item_type=0).count()
 
     @extend_schema_field(OpenApiTypes.INT)
