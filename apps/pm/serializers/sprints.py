@@ -33,12 +33,12 @@ class SprintRetrieveSerializer(BaseModelSerializer):
 
     @extend_schema_field(OpenApiTypes.INT)
     def get_requirement_count(self, obj: Sprint):
-        return obj.workitem_set.filter(work_item_type=0).count()
-
-    @extend_schema_field(OpenApiTypes.INT)
-    def get_task_count(self, obj: Sprint):
         return obj.workitem_set.filter(work_item_type=1).count()
 
     @extend_schema_field(OpenApiTypes.INT)
-    def get_bug_count(self, obj: Sprint):
+    def get_task_count(self, obj: Sprint):
         return obj.workitem_set.filter(work_item_type=2).count()
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_bug_count(self, obj: Sprint):
+        return obj.workitem_set.filter(work_item_type=3).count()
