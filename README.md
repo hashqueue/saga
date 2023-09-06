@@ -1,6 +1,6 @@
 # saga
 
-基于 Django4.2 + Vue3 + Ant Design Vue 4.x + MySQL8.x 开发的Admin脚手架
+一站式项目管理平台，助力企业提升项目管理效能。
 
 权限控制基于RBAC，精确到菜单和按钮级别权限控制。
 
@@ -13,7 +13,7 @@
 # cd到项目根目录，创建虚拟环境
 python3 -m venv venv
 source venv/bin/activate
-pip3 install -i https://pypi.doubanio.com/simple -U pip
+pip3 install -i https://pypi.doubanio.com/simple -U pip setuptools
 # 安装mysqlclient如果报错就去github仓库(https://github.com/PyMySQL/mysqlclient)查看readme文档查看如何安装缺失的相关依赖包
 pip3 install -i https://pypi.doubanio.com/simple -r requirements.txt
 #####################################################
