@@ -19,7 +19,7 @@ class SendEmailTask(CTask):
         @param kwargs: 传给任务函数的关键字参数
         @return:
         """
-        logger.info(f"任务成功执行，返回值：{retval}")
+        logger.info(f"发送邮件任务执行成功，函数返回值：{retval}")
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """
@@ -31,7 +31,7 @@ class SendEmailTask(CTask):
         @param einfo: 错误详细信息
         @return:
         """
-        logger.error(f"任务执行失败，异常信息：{exc}")
+        logger.error(f"发送邮件任务执行失败：{exc}，异常信息如下：{einfo}")
 
 
 @shared_task(base=SendEmailTask)
@@ -53,7 +53,7 @@ def send_email(subject: str, msg_type: str, message: str, recipient_list: List[s
     elif msg_type == 'html':
         send_mail(subject, '', None, recipient_list, html_message=message)
     else:
-        logger.error(f"邮件内容类型{msg_type}错误！")
+        logger.error(f"不支持该邮件内容类型：{msg_type}")
         return False
-    logger.info("邮件发送成功！")
+    logger.info("邮件发送成功")
     return True

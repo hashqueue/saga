@@ -5,6 +5,7 @@ __pycache__/
 *$py.class
 
 .idea
+.env.dev1
 static/media/user_upload_files
 
 # C extensions
