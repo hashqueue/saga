@@ -33,6 +33,21 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'apps/'))
 SECRET_KEY = 'django-insecure-u^fn3+%(k@_-@ar8o+j5m496rh6(7yg%v^p!4ew4!y!xt&7u_a'
 DEFAULT_USER_PASSWORD = env('BASE_DEFAULT_USER_PASSWORD')
 
+# 当 DEBUG=False 和 AdminEmailHandler 中设置了 LOGGING 时 给ADMINS收件人列表发送邮件
+ADMINS = [("hashqueue", "hashqueue@foxmail.com")]
+# 指定当 BrokenLinkEmailsMiddleware 被启用时，谁应该收到断链通知。
+MANAGERS = ADMINS
+
+# 邮箱服务配置
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env('EMAIL_PORT')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+EMAIL_USE_SSL = False  # 是否使用SSL加密，值为True时，EMAIL_PORT=465；值为False时，EMAIL_PORT=25
+# 错误信息来自的电子邮件地址，例如发送到 ADMINS 和 MANAGERS 的邮件。
+SERVER_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = eval(env('BASE_DEBUG'))
 ALLOWED_HOSTS = ["*"]
@@ -71,7 +86,7 @@ MIDDLEWARE = [
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Saga API',
-    'DESCRIPTION': 'Saga - 后台管理系统接口文档',
+    'DESCRIPTION': 'Saga - 一站式项目管理平台接口文档',
     'VERSION': '1.0',
     'CONTACT': {"email": "1912315910@qq.com"},
     'LICENSE': {"name": "Apache-2.0 License"},
@@ -152,7 +167,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'saga.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -164,10 +178,10 @@ DATABASES = {
         'PASSWORD': env('DB_PASSWORD'),
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {'charset': 'utf8mb4'}
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -187,7 +201,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -199,8 +212,28 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = False
+USE_TZ = True
 
+# Celery配置选项
+# CELERY_RESULT_BACKEND = 'django-db'
+# # If True the task will report its status as `started` when the task is executed by a worker.
+CELERY_TASK_TRACK_STARTED = True
+CELERY_BROKER_URL = f"amqp://{env('MQ_USER')}:{env('MQ_PASSWORD')}@{env('MQ_HOST')}:" \
+                    f"{env('MQ_PORT')}/{env('MQ_VHOST')}"
+# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# # CELERY_TASK_ACKS_LATE = True  # 设置手动ack
+CELERY_TASK_ROUTES = {
+    'system.tasks.send_email': {'queue': 'saga_send_email_queue', 'routing_key': 'send_email'},
+}
+CELERY_TASK_QUEUES = {
+    # queue name : { ...configs }
+    'saga_send_email_queue': {'exchange': 'saga_email_exchange', 'exchange_type': 'direct', 'durable': True,
+                              'auto_delete': False, 'routing_key': 'send_email'},
+}
+TASK_LOGGER_NAME = 'saga.celery.task'
+TASK_LOG_DIR = os.path.join(BASE_DIR, 'logs', 'celery_task_logs')
+if not os.path.exists(TASK_LOG_DIR):
+    os.makedirs(TASK_LOG_DIR)
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

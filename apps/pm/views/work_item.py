@@ -6,6 +6,7 @@ from django_filters import rest_framework as filters
 from utils.drf_utils.custom_json_response import JsonResponse, unite_response_format_schema
 from pm.serializers.work_items import WorkItemCreateUpdateSerializer, WorkItemRetrieveSerializer
 from pm.models import WorkItem, Changelog
+from system.tasks import send_email
 
 
 class WorkItemFilter(filters.FilterSet):
@@ -42,7 +43,7 @@ class WorkItemViewSet(ModelViewSet):
         serializer.save(updated_by=self.request.user.username)  # 更新数据并入库
         current_data: dict = serializer.data
         ignore_columns = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'sprint', 'parent',
-                          'work_item_type', 'followers']
+                          'work_item_type', 'followers', 'desc']
         mapping_columns_data = {'priority': dict(WorkItem.PRIORITY_CHOICES),
                                 'work_item_status': dict(WorkItem.WORK_ITEM_STATUS_CHOICES),
                                 'severity': dict(WorkItem.SEVERITY_CHOICES),
@@ -54,8 +55,7 @@ class WorkItemViewSet(ModelViewSet):
         diff_results = []
         for key, value in current_data.items():
             if key not in ignore_columns:
-                if value != origin_data.get(key):
-                    # 当前值与历史值不同时
+                if value != origin_data.get(key):  # 当前值与历史值不同时
                     if key in mapping_columns_data.keys():
                         diff_results.append({'key': key, 'desc': columns_desc.get(key),
                                              'origin': self.check_is_value_null(
@@ -68,6 +68,32 @@ class WorkItemViewSet(ModelViewSet):
                                              'current': self.check_is_value_null(value)})
         Changelog.objects.create(changelog=diff_results, work_item=WorkItem.objects.get(id=self.kwargs.get('pk')),
                                  created_by=self.request.user.username)
+        if diff_results:
+            followers_email = [user.email for user in origin_work_item_obj.followers.all()]
+            if followers_email:
+                content = ''
+                for item in diff_results:
+                    content += (f'<li>{item["desc"]}：<span style="color: red"><del>{item["origin"]}</del></span> -> '
+                                f'<span style="color: green">{item["current"]}</span></li>\n')
+                html_msg = f"""<!DOCTYPE html>
+                <html lang="zh">
+                <head>
+                  <meta charset="UTF-8">
+                  <title>WorkItem Update Notice</title>
+                </head>
+                <body>
+                <p>用户【{self.request.user.username}】更新了工作项【<span style="color: dodgerblue">
+                {origin_work_item_obj.name}</span>】，详情如下：</p>
+                <ul>
+                {content}
+                </ul>
+                </body>
+                </html>
+                """
+                send_email.delay(subject=f'工作项[{origin_work_item_obj.name}]更新通知',
+                                 msg_type='html',
+                                 message=html_msg,
+                                 recipient_list=followers_email)
 
     @staticmethod
     def check_is_value_null(value):

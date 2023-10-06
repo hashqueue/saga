@@ -29,8 +29,18 @@ ENV_PATH=.env.dev python3 manage.py makemigrations
 python3 manage.py migrate
 # 导入初始化数据
 python3 manage.py loaddata init_db.json
+#####################################################
+###                     RabbitMQ                  ###
+#####################################################
+# 使用docker在本地快速启动一个rabbitmq服务器
+# 15672：RabbitMQ 管理控制台端口，用于通过 Web 界面进行管理和监控 RabbitMQ 服务。
+# 5672：RabbitMQ 的 AMQP 端口，用于客户端与 RabbitMQ 之间的通信。
+# 1883：MQTT 协议的默认端口，RabbitMQ 也支持 MQTT 协议，并且可以通过该端口接收来自 MQTT 客户端的消息。
+docker run -d --name ramq -p 5672:5672 -p 15672:15672 -p 1883:1883 -v /home/hashqueue/rabbitmq:/var/lib/rabbitmq rabbitmq:3.11-management-alpine
 # 启动项目
 python3 manage.py runserver 0.0.0.0:8000
+# 启动celery worker
+celery -A saga worker -Q saga_send_email_queue -l info --concurrency=4 --prefetch-multiplier=1 --hostname=worker_email@%h
 
 # 前端开发环境搭建见前端仓库 https://github.com/hashqueue/saga-web.git
 
