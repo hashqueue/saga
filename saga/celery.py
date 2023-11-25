@@ -7,6 +7,7 @@ from celery.signals import task_postrun, task_prerun
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'saga.settings')
+
 from django.conf import settings
 
 app = Celery('saga')
