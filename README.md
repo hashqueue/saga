@@ -40,7 +40,8 @@ docker run -d --name ramq -p 5672:5672 -p 15672:15672 -p 1883:1883 -v /home/hash
 # 启动项目
 python3 manage.py runserver 0.0.0.0:8000
 # 启动celery worker
-celery -A saga worker -Q saga_send_email_queue -l info --concurrency=4 --prefetch-multiplier=1 --hostname=worker_email@%h
+celery -A saga worker -Q saga_make_changelog_queue -l info --concurrency=1 --prefetch-multiplier=1 --hostname=worker_changelog@%h
+celery -A saga worker -Q saga_send_email_queue -l info --concurrency=1 --prefetch-multiplier=1 --hostname=worker_email@%h
 
 # 前端开发环境搭建见前端仓库 https://github.com/hashqueue/saga-web.git
 

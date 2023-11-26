@@ -223,10 +223,13 @@ CELERY_BROKER_URL = f"amqp://{env('MQ_USER')}:{env('MQ_PASSWORD')}@{env('MQ_HOST
 # CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # # CELERY_TASK_ACKS_LATE = True  # 设置手动ack
 CELERY_TASK_ROUTES = {
-    'system.tasks.send_email': {'queue': 'saga_send_email_queue', 'routing_key': 'send_email'},
+    'pm.tasks.make_changelog': {'queue': 'saga_make_changelog_queue', 'routing_key': 'make_changelog'},
+    'system.tasks.send_email': {'queue': 'saga_send_email_queue', 'routing_key': 'send_email'}
 }
 CELERY_TASK_QUEUES = {
     # queue name : { ...configs }
+    'saga_make_changelog_queue': {'exchange': 'make_changelog_exchange', 'exchange_type': 'direct', 'durable': True,
+                                  'auto_delete': False, 'routing_key': 'make_changelog'},
     'saga_send_email_queue': {'exchange': 'saga_email_exchange', 'exchange_type': 'direct', 'durable': True,
                               'auto_delete': False, 'routing_key': 'send_email'},
 }

@@ -5,7 +5,8 @@ from django_filters import rest_framework as filters
 
 from utils.drf_utils.custom_json_response import JsonResponse, unite_response_format_schema
 from pm.serializers.work_items import WorkItemCreateUpdateSerializer, WorkItemRetrieveSerializer
-from pm.models import WorkItem, Changelog
+from pm.models import WorkItem
+from pm.tasks import make_changelog
 from system.tasks import send_email
 
 
@@ -35,71 +36,20 @@ class WorkItemViewSet(ModelViewSet):
             return WorkItemRetrieveSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user.username, updated_by=self.request.user.username)
+        serializer.save(created_by=self.request.user.username, updated_by=self.request.user.username,
+                        followers=[self.request.user])
 
     def perform_update(self, serializer):
         origin_work_item_obj = WorkItem.objects.get(id=self.kwargs.get('pk'))
         origin_data: dict = WorkItemCreateUpdateSerializer(instance=origin_work_item_obj).data
-        serializer.save(updated_by=self.request.user.username)  # 更新数据并入库
-        current_data: dict = serializer.data
-        ignore_columns = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'sprint', 'parent',
-                          'work_item_type', 'followers', 'desc']
-        mapping_columns_data = {'priority': dict(WorkItem.PRIORITY_CHOICES),
-                                'work_item_status': dict(WorkItem.WORK_ITEM_STATUS_CHOICES),
-                                'severity': dict(WorkItem.SEVERITY_CHOICES),
-                                'bug_type': dict(WorkItem.BUG_TYPE_CHOICES),
-                                'process_result': dict(WorkItem.PROCESS_RESULT_CHOICES)}
-        columns_desc = {'name': '标题', 'owner': '负责人', 'priority': '优先级', 'work_item_status': '状态',
-                        'severity': '严重程度', 'bug_type': '缺陷类型', 'process_result': '处理结果', 'desc': '描述',
-                        'deadline': '截止日期', 'followers': '关注者'}
-        diff_results = []
-        for key, value in current_data.items():
-            if key not in ignore_columns:
-                if value != origin_data.get(key):  # 当前值与历史值不同时
-                    if key in mapping_columns_data.keys():
-                        diff_results.append({'key': key, 'desc': columns_desc.get(key),
-                                             'origin': self.check_is_value_null(
-                                                 mapping_columns_data.get(key).get(origin_data.get(key))),
-                                             'current': self.check_is_value_null(
-                                                 mapping_columns_data.get(key).get(value))})
-                    else:
-                        diff_results.append({'key': key, 'desc': columns_desc.get(key),
-                                             'origin': self.check_is_value_null(origin_data.get(key)),
-                                             'current': self.check_is_value_null(value)})
-        Changelog.objects.create(changelog=diff_results, work_item=WorkItem.objects.get(id=self.kwargs.get('pk')),
-                                 created_by=self.request.user.username)
-        if diff_results:
-            followers_email = [user.email for user in origin_work_item_obj.followers.all()]
-            if followers_email:
-                content = ''
-                for item in diff_results:
-                    content += (f'<li>{item["desc"]}：<span style="color: red"><del>{item["origin"]}</del></span> -> '
-                                f'<span style="color: green">{item["current"]}</span></li>\n')
-                html_msg = f"""<!DOCTYPE html>
-                <html lang="zh">
-                <head>
-                  <meta charset="UTF-8">
-                  <title>WorkItem Update Notice</title>
-                </head>
-                <body>
-                <p>用户【{self.request.user.username}】更新了工作项【<span style="color: dodgerblue">
-                {origin_work_item_obj.name}</span>】，详情如下：</p>
-                <ul>
-                {content}
-                </ul>
-                </body>
-                </html>
-                """
-                send_email.delay(subject=f'工作项[{origin_work_item_obj.name}]更新通知',
-                                 msg_type='html',
-                                 message=html_msg,
-                                 recipient_list=followers_email)
-
-    @staticmethod
-    def check_is_value_null(value):
-        if value is None:
-            return 'null'
-        return value
+        followers_email = [user.email for user in origin_work_item_obj.followers.all()]
+        # 更新数据并入库
+        serializer.save(updated_by=self.request.user.username)
+        # 生成变更记录并发送邮件
+        # PS：celery的任务函数可以链式调用，当上一个任务函数执行成功后，再执行下一个任务函数，
+        # 同时也会把上一个任务函数的返回值传给下一个任务函数，直到链式调用的所有任务函数执行完毕
+        (make_changelog.s(origin_data, serializer.data, self.request.user.username,
+                          followers_email) | send_email.s()).delay()
 
     @extend_schema(responses=unite_response_format_schema('create-work-item', WorkItemCreateUpdateSerializer()))
     def create(self, request, *args, **kwargs):
