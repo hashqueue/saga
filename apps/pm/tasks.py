@@ -5,7 +5,7 @@ from pm.models import WorkItem, Changelog
 
 def check_is_value_null(value):
     if value is None:
-        return ''
+        return 'null'
     return value
 
 

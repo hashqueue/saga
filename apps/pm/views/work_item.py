@@ -7,6 +7,7 @@ from utils.drf_utils.custom_json_response import JsonResponse, unite_response_fo
 from pm.serializers.work_items import WorkItemCreateUpdateSerializer, WorkItemRetrieveSerializer
 from pm.models import WorkItem
 from pm.tasks import make_changelog
+from system.models import User
 from system.tasks import send_email
 
 
@@ -36,15 +37,31 @@ class WorkItemViewSet(ModelViewSet):
             return WorkItemRetrieveSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user.username, updated_by=self.request.user.username,
-                        followers=[self.request.user])
+        owner = User.objects.filter(username=serializer.validated_data.get('owner')).first()
+        followers: list = serializer.validated_data.get('followers')
+        if followers:
+            followers_tmp = set(followers)
+            followers_tmp.update([self.request.user, owner])
+            serializer.save(created_by=self.request.user.username, updated_by=self.request.user.username,
+                            followers=list(followers_tmp))
+        else:
+            serializer.save(created_by=self.request.user.username, updated_by=self.request.user.username,
+                            followers=[self.request.user, owner])
 
     def perform_update(self, serializer):
         origin_work_item_obj = WorkItem.objects.get(id=self.kwargs.get('pk'))
         origin_data: dict = WorkItemCreateUpdateSerializer(instance=origin_work_item_obj).data
+        # TODO: 这里只是给 更新WorkItem之前的followers发邮件提醒了，可能也需要给现在的followers也发邮件
         followers_email = [user.email for user in origin_work_item_obj.followers.all()]
         # 更新数据并入库
-        serializer.save(updated_by=self.request.user.username)
+        owner = User.objects.filter(username=serializer.validated_data.get('owner')).first()
+        current_followers: list = serializer.validated_data.get('followers')
+        if current_followers:
+            followers_tmp = set(current_followers)
+            followers_tmp.update([self.request.user, owner])
+            serializer.save(updated_by=self.request.user.username, followers=list(followers_tmp))
+        else:
+            serializer.save(updated_by=self.request.user.username, followers=[self.request.user, owner])
         # 生成变更记录并发送邮件
         # PS：celery的任务函数可以链式调用，当上一个任务函数执行成功后，再执行下一个任务函数，
         # 同时也会把上一个任务函数的返回值传给下一个任务函数，直到链式调用的所有任务函数执行完毕
