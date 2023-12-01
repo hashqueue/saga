@@ -1,5 +1,6 @@
 import time
 import json
+from datetime import datetime
 
 import psutil
 from django.http import StreamingHttpResponse
@@ -9,6 +10,8 @@ def fetch_data():
     # 获取服务器性能相关数据
     cpu_count = psutil.cpu_count()
     cpu_percent = psutil.cpu_percent()
+    cpu_load_avg = psutil.getloadavg()
+    net_info = psutil.net_io_counters()
     virtual_memory = psutil.virtual_memory()
     total_memory = eval(f'{(virtual_memory.total / 1024 / 1024 / 1024):.2f}')
     available_memory = eval(f'{(virtual_memory.available / 1024 / 1024 / 1024):.2f}')
@@ -22,7 +25,17 @@ def fetch_data():
     free_disk = eval(f'{disk_info.free / 1024 / 1024 / 1024:.2f}')
     disk_percent = disk_info.percent
     server_data = {
-        'cpu': {'cpu_count': cpu_count, 'cpu_percent': cpu_percent},
+        'time': datetime.now().strftime('%H:%M:%S'),
+        'cpu': {
+            'cpu_count': cpu_count, 'cpu_percent': cpu_percent, 'cpu_loadavg_1': cpu_load_avg[0],
+            'cpu_loadavg_5': cpu_load_avg[1], 'cpu_loadavg_15': cpu_load_avg[2]
+        },
+        'net': {
+            'bytes_sent': eval(f'{net_info.bytes_sent / 1024:.2f}'),
+            'bytes_recv': eval(f'{net_info.bytes_recv / 1024:.2f}'),
+            'packets_sent': net_info.packets_sent,
+            'packets_recv': net_info.packets_recv,
+        },
         'memory': {
             'total_memory': total_memory, 'available_memory': available_memory, 'free_memory': free_memory,
             'used_memory': used_memory, 'memory_percent': memory_percent
