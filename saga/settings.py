@@ -69,6 +69,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'django_filters',
     'drf_spectacular',
+    'django_celery_beat',
+    'django_celery_results',
 
     'system',
     'pm'
@@ -215,12 +217,14 @@ USE_L10N = True
 USE_TZ = True
 
 # Celery配置选项
-# CELERY_RESULT_BACKEND = 'django-db'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = False
+CELERY_RESULT_BACKEND = 'django-db'
 # # If True the task will report its status as `started` when the task is executed by a worker.
 CELERY_TASK_TRACK_STARTED = True
 CELERY_BROKER_URL = f"amqp://{env('MQ_USER')}:{env('MQ_PASSWORD')}@{env('MQ_HOST')}:" \
                     f"{env('MQ_PORT')}/{env('MQ_VHOST')}"
-# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # # CELERY_TASK_ACKS_LATE = True  # 设置手动ack
 CELERY_TASK_ROUTES = {
     'pm.tasks.make_changelog': {'queue': 'saga_make_changelog_queue', 'routing_key': 'make_changelog'},

@@ -34,7 +34,7 @@ class SendEmailTask(CTask):
         logger.error(f"发送邮件任务执行失败：{exc}，异常信息如下：{einfo}")
 
 
-@shared_task(base=SendEmailTask)
+@shared_task(base=SendEmailTask, ignore_result=True)
 def send_email(config: dict):
     """
     发送邮件

@@ -10,6 +10,7 @@ from system.views.department import DepartmentViewSet
 from system.views.permission import PermissionViewSet
 from system.views.role import RoleViewSet
 from system.views.monitor import fetch_performance_data
+from system.views.periodic_task import PeriodicTaskViewSet
 
 router = routers.DefaultRouter()
 # 如果视图类中没有指定queryset，则需要手动指定basename
@@ -17,6 +18,7 @@ router.register(prefix=r'departments', viewset=DepartmentViewSet, basename='depa
 router.register(prefix=r'permissions', viewset=PermissionViewSet, basename='permission')
 router.register(prefix=r'roles', viewset=RoleViewSet, basename='role')
 router.register(prefix=r'users', viewset=UserViewSet, basename='user')
+router.register(prefix=r'periodic-tasks', viewset=PeriodicTaskViewSet, basename='periodic-task')
 urlpatterns = [
     path('monitor/', fetch_performance_data, name='fetch_performance_data'),
     path('auth/login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

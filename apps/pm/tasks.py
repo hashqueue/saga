@@ -9,7 +9,7 @@ def check_is_value_null(value):
     return value
 
 
-@shared_task
+@shared_task(ignore_result=True)
 def make_changelog(origin_data: dict, current_data: dict, created_by: str, followers_email: list[str] = None):
     if followers_email:
         ignore_columns = ['id', 'created_at', 'updated_at', 'created_by', 'updated_by', 'sprint', 'parent',

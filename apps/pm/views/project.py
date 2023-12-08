@@ -30,6 +30,8 @@ class ProjectViewSet(ModelViewSet):
             return ProjectCreateUpdateSerializer
         elif self.action in ['retrieve', 'destroy', 'list']:
             return ProjectRetrieveSerializer
+        elif self.action == 'get_project_members':
+            return GetAllUserSerializer
 
     @staticmethod
     def init_project_members(request):
@@ -121,7 +123,7 @@ class ProjectViewSet(ModelViewSet):
 
     @extend_schema(responses=unite_response_format_schema('get-project-members', GetAllUserSerializer()))
     @action(methods=['get'], detail=True, url_path='members')
-    def get_user_statistics(self, request, pk=None, version=None):
+    def get_project_members(self, request, pk=None, version=None):
         """
         获取当前项目下的所有成员
         """
