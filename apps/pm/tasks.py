@@ -1,6 +1,8 @@
+from django.core.mail import send_mail
 from celery import shared_task
 
-from pm.models import WorkItem, Changelog
+from pm.models import WorkItem, Changelog, Project, Sprint
+from system.models import User
 
 
 def check_is_value_null(value):
@@ -62,3 +64,47 @@ def make_changelog(origin_data: dict, current_data: dict, created_by: str, follo
                     'recipient_list': followers_email}
         return {'subject': '', 'msg_type': 'html', 'message': '', 'recipient_list': []}
     return {'subject': '', 'msg_type': 'html', 'message': '', 'recipient_list': []}
+
+
+@shared_task(ignore_result=True)
+def send_work_items_notice(project_id: int):
+    project = Project.objects.filter(id=project_id).first()
+    if project:
+        # 统计项目下的 所有迭代中的 所有未开始，待处理，重新打开，待处理，修复中状态的工作项和工作项的负责人及负责人的邮箱信息
+        sprints = Sprint.objects.filter(project=project)
+        work_items = WorkItem.objects.filter(sprint__in=sprints,
+                                             work_item_status__in=[1, 2, 3, 7, 12]).values('name', 'owner')
+        work_items_info = {}
+        work_item_status_mapping = dict(WorkItem.WORK_ITEM_STATUS_CHOICES)
+        for work_item in work_items:
+            if work_item.get('owner') not in work_items_info.keys():
+                work_items_info[work_item.get('owner')] = [{
+                    'name': work_item.get('name'), 'status': work_item.get('work_item_status')
+                }]
+            else:
+                work_items_info[work_item.get('owner')].append({
+                    'name': work_item.get('name'), 'status': work_item.get('work_item_status')
+                })
+        for owner, work_items in work_items_info.items():
+            owner_email = User.objects.get(username=owner).email
+            # 生成邮件内容
+            content = ''
+            for item in work_items:
+                content += (f'<li><span style="color: dodgerblue">{item["name"]}</span> -> '
+                            f'<span style="color: orange">{work_item_status_mapping.get(item["status"])}</span></li>')
+            html_msg = f"""<!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>WorkItem Status Notice</title>
+                    </head>
+                    <body>
+                        <p>您有<span style="color: dodgerblue">工作项</span>待处理，详情如下：</p>
+                        <ul>
+                            {content}
+                        </ul>
+                    </body>
+                    </html>
+                    """
+            send_mail('工作项状态提醒', '', None, [owner_email],
+                      html_message=html_msg)
